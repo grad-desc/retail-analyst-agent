@@ -1,0 +1,25 @@
+id: return-rate-by-category
+status: approved
+question: Which product categories have the highest return rate?
+interpretation: Return rate is returned items divided by all items sold. Categories with fewer than 100
+  items are excluded as too small to compare.
+tags:
+- product-performance
+- returns
+sql: |-
+  SELECT p.category,
+         COUNT(*) AS items,
+         COUNTIF(oi.status = 'Returned') AS returned,
+         ROUND(COUNTIF(oi.status = 'Returned') / COUNT(*), 3) AS return_rate
+  FROM order_items AS oi
+  JOIN products AS p ON p.id = oi.product_id
+  GROUP BY p.category
+  HAVING COUNT(*) >= 100
+  ORDER BY return_rate DESC
+  LIMIT 10
+report: |-
+  **Headline:** <Category> has the highest return rate at <r>%, vs <avg>% overall.
+  **Recommended actions:**
+  1. Review sizing/quality information for the worst categories (priority: high).
+created_by: project-author (illustrative seed)
+version: 1

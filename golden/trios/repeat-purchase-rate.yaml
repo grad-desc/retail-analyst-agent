@@ -1,0 +1,41 @@
+id: repeat-purchase-rate
+status: approved
+question: How frequently do customers make repeat purchases, and what share of our customer base returns to buy again?
+interpretation: |
+  Repeat purchase rate is the percentage of customers with more than one eligible order among all customers with at least one eligible order. Keep single-order customers in the denominator; filtering them out would inflate the rate to 100%. Always specify order eligibility criteria and the reporting period.
+tags:
+- customer-behavior
+- repeat-purchase
+- metric-interpretation
+sql: |-
+  WITH customer_orders AS (
+      SELECT
+          user_id,
+          COUNT(DISTINCT order_id) AS order_count
+      FROM `bigquery-public-data.thelook_ecommerce.order_items`
+      WHERE status NOT IN ('Cancelled', 'Returned')
+      GROUP BY user_id
+  )
+  SELECT
+      COUNT(*) AS total_customers,
+      COUNTIF(order_count > 1) AS repeat_customers,
+      SAFE_DIVIDE(
+          COUNTIF(order_count > 1),
+          COUNT(*)
+      ) * 100 AS repeat_purchase_rate_pct
+  FROM customer_orders
+report: |-
+  **Headline:** 30.50% of customers with at least one eligible order made more than one eligible purchase.
+
+  **Findings:**
+  - The dataset contains 66,286 customers with at least one order containing an item whose status is neither 'Cancelled' nor 'Returned'.
+  - Of these, 20,217 customers had more than one distinct eligible order.
+  - The repeat purchase rate is 20,217 / 66,286 × 100 = 30.50%.
+  - Customers with only one eligible order must remain in the denominator. Filtering them out would make the repeat purchase rate appear to be 100%, which would be misleading.
+  - This calculation excludes order items marked 'Cancelled' or 'Returned'. Because eligibility is evaluated at the item level, an order with mixed item statuses may still be counted if it contains at least one eligible item. The result should therefore be interpreted according to this query's order eligibility rule, not as a universal measure of customer retention.
+
+  **Recommended actions:**
+  1. Track repeat purchase rate across consistent reporting periods and customer cohorts (priority: high).
+  2. Segment repeat purchase behaviour by acquisition cohort and product category to identify opportunities for customer retention (priority: medium).
+created_by: project-author (illustrative seed)
+version: 1

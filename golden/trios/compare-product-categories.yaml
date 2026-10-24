@@ -1,0 +1,29 @@
+id: compare-product-categories
+status: approved
+question: Compare the performance of two product categories and explain why they differ
+interpretation: Performance means net revenue, items sold, average price, margin rate and return rate
+  side by side. The 'why' is answered from those drivers.
+tags:
+- product-performance
+- comparison
+sql: |-
+  SELECT p.category,
+         COUNT(*) AS items_sold,
+         ROUND(SUM(IF(oi.status NOT IN ('Cancelled', 'Returned'), oi.sale_price, 0)), 2) AS net_revenue,
+         ROUND(AVG(oi.sale_price), 2) AS avg_price,
+         ROUND(SUM(oi.sale_price - p.cost) / NULLIF(SUM(oi.sale_price), 0), 3) AS margin_rate,
+         ROUND(COUNTIF(oi.status = 'Returned') / COUNT(*), 3) AS return_rate
+  FROM order_items AS oi
+  JOIN products AS p ON p.id = oi.product_id
+  WHERE p.category IN ('Jeans', 'Dresses')
+  GROUP BY p.category
+report: |-
+  **Headline:** <Category A> out-earns <Category B> by <X>% in net revenue.
+  **Why they differ:**
+  - Volume: <A> sold <n_A> items vs <n_B>.
+  - Price: average price <p_A> vs <p_B>.
+  - Margin and returns: <margin_A> vs <margin_B>; return rate <r_A> vs <r_B>.
+  **Recommended actions:**
+  1. Address the weaker category's main driver (volume, price or returns) first (priority: high).
+created_by: project-author (illustrative seed)
+version: 1

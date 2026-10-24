@@ -1,0 +1,24 @@
+id: top-products-by-units
+status: approved
+question: Which products sell the most units?
+interpretation: Units are order items excluding Cancelled and Returned. Products are listed by name and
+  brand.
+tags:
+- product-performance
+- ranking
+sql: |-
+  SELECT p.name, p.brand, p.category,
+         COUNT(*) AS units,
+         ROUND(SUM(oi.sale_price), 2) AS revenue
+  FROM order_items AS oi
+  JOIN products AS p ON p.id = oi.product_id
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+  GROUP BY p.name, p.brand, p.category
+  ORDER BY units DESC
+  LIMIT 10
+report: |-
+  **Headline:** <Product> leads with <units> units, followed by <Product2>.
+  **Recommended actions:**
+  1. Keep best sellers in stock and feature them in promotions (priority: medium).
+created_by: project-author (illustrative seed)
+version: 1

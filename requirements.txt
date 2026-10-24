@@ -1,0 +1,13 @@
+google-genai
+google-cloud-bigquery
+db-dtypes
+pandas
+sqlglot>=25
+tenacity
+python-dotenv
+langgraph
+langgraph-checkpoint-sqlite
+rich
+typer
+pyyaml
+pytest

@@ -1,0 +1,28 @@
+id: top-customers-by-spend
+status: approved
+question: Who are our top 10 customers by total spend?
+interpretation: 'Spend means net revenue: SUM(sale_price) excluding Cancelled and Returned items. Customers
+  are identified by user id and state only, never by name or email.'
+tags:
+- customer-behavior
+- ranking
+sql: |-
+  SELECT oi.user_id, u.state, u.country,
+         COUNT(DISTINCT oi.order_id) AS orders,
+         ROUND(SUM(oi.sale_price), 2) AS total_spend
+  FROM order_items AS oi
+  JOIN users AS u ON u.id = oi.user_id
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+  GROUP BY oi.user_id, u.state, u.country
+  ORDER BY total_spend DESC
+  LIMIT 10
+report: |-
+  **Headline:** The top 10 customers contributed <X>% of net revenue.
+  **Findings:**
+  - Highest spender: customer <id> from <state> with <total_spend> across <orders> orders.
+  - Spend is concentrated in <states/countries>.
+  **Recommended actions:**
+  1. Launch a loyalty program for the top-spend segment (priority: high).
+  2. Investigate what these customers buy most and promote it to similar customers.
+created_by: project-author (illustrative seed)
+version: 1

@@ -1,0 +1,31 @@
+id: quarterly-report-by-category
+status: approved
+question: Create a report for Q1 including insights and action items for Q2
+interpretation: A quarterly report covers monthly net revenue and orders by product category for the quarter,
+  then recommends actions for the next quarter. Q1 is January to March of the requested year.
+tags:
+- report
+- time-based
+- product-performance
+sql: |-
+  SELECT TIMESTAMP_TRUNC(oi.created_at, MONTH) AS month,
+         p.category,
+         COUNT(DISTINCT oi.order_id) AS orders,
+         ROUND(SUM(oi.sale_price), 2) AS revenue
+  FROM order_items AS oi
+  JOIN products AS p ON p.id = oi.product_id
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+    AND oi.created_at >= TIMESTAMP('2024-01-01') AND oi.created_at < TIMESTAMP('2024-04-01')
+  GROUP BY month, p.category
+  ORDER BY month, revenue DESC
+report: |-
+  **Summary:** Q1 net revenue was <total>, <up/down> <x>% versus <baseline>.
+  **Key findings:**
+  - Top categories: <A> (<share>%), <B>, <C>.
+  - Strongest month: <month>; weakest: <month>.
+  **Risks or anomalies:** <any category with falling revenue or unusual returns>.
+  **Recommended actions for Q2:**
+  1. Double down on <A> in the weeks leading to its peak (priority: high).
+  2. Fix the underperformance in <D> (priority: medium).
+created_by: project-author (illustrative seed)
+version: 1
