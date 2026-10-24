@@ -527,7 +527,7 @@ working assumptions so the design is complete; each can be changed in one place.
 Google AI Studio. Docker is not needed.
 
 ```bash
-git clone <this-repo> && cd retail-analyst-agent
+git clone https://github.com/grad-desc/retail-analyst-agent.git && cd retail-analyst-agent
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
@@ -576,7 +576,7 @@ docker run -it --env-file .env \
 
 **Windows**:
 
-```bash
+```powershell
 docker build -t retail-analyst .
 docker run -it --env-file .env -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/adc.json -v "$env:APPDATA\gcloud\application_default_credentials.json:/tmp/adc.json:ro" retail-analyst
 ```
@@ -705,8 +705,14 @@ the live data and model, so a recorded transcript is included below rather than 
 
 > **You:** /sql
 > 
-> SELECT user_id, ROUND(SUM(sale_price), 2) AS total_spend FROM (SELECT id, order_id, user_id, product_id, inventory_item_id, status, created_at, shipped_at, delivered_at, returned_at, sale_price FROM `bigquery-public-data.thelook_ecommerce.order_items`) AS order_items WHERE NOT status IN ('Cancelled', 
-'Returned') GROUP BY user_id ORDER BY total_spend DESC LIMIT 10
+> ```sql
+> SELECT user_id, ROUND(SUM(sale_price), 2) AS total_spend
+> FROM `bigquery-public-data.thelook_ecommerce.order_items`
+> WHERE NOT status IN ('Cancelled', 'Returned')
+> GROUP BY user_id
+> ORDER BY total_spend DESC
+> LIMIT 10
+> ```
 
 #### 3. Product performance analysis (Requirement 1: Hybrid Intelligence, golden bucket)
 
@@ -732,6 +738,12 @@ the live data and model, so a recorded transcript is included below rather than 
 > specific subset of data analyzed rather than overall business performance.
 
 `done · trace 2ff5b430e676 · 73.8s · 4 LLM calls · 1 SQL attempt`
+
+> **Known artifact (see §12).** The `0% return rate` line is an artifact of the query
+> (`WHERE status NOT IN ('Cancelled', 'Returned')`), not a business fact. The model flags it
+> correctly in some runs (e.g. "though this may reflect the specific subset") and reports it
+> as a fact in others (e.g. "returns are not a factor"). The `reasoning` dimension of the judge
+> and the golden trios reduce the probability, but LLM non-determinism is documented in §12.
 
 #### 4. Report generation (Requirement 3: High-Stakes Oversight)
 
@@ -854,8 +866,15 @@ the live data and model, so a recorded transcript is included below rather than 
 
 `done · trace 5c5df59e1529 · 13.7s · 3 LLM calls · 1 SQL attempt`
 
-#### 9. Churn analysis: model challenges the premise and segments the data
-(Requirement 1: Hybrid Intelligence, Requirement 4: system-level learning)
+> **Known artifact (see §12).** Same as step 3: the `Return rates ... were 0.0%` line reflects
+> a query that filters out returns, not the business. This is the non-determinism documented
+> in §12, not a prompt bug.
+> 
+> **Why the numbers differ from step 3.** Step 4 asked for a 2023 report, so the conversation
+> history now says "2023". The model applies that context to step 8, so the totals here cover
+> 2023 only, while step 3 covers all time. Both queries are correct for their scope.
+
+#### 9. Churn analysis: model challenges the premise (Requirements 1 and 4)
 
 > **You:** Why did churn spike last month?
 >
@@ -898,58 +917,65 @@ cand-6c04539e57  Why did our churn rate spike last month?
 
 **Before** (`persona.md` = "professional, concise and direct"):
 
-> **You:** Why did churn spike last month?
+> **You:** Who are our top 10 customers by total spend?
 >
-> **Analyst:** Headline: Customer churn actually improved last month, declining from 91.8% in 
-> August to 90.0% in September.
+> **Analyst:** Headline: Our top 10 customers have each spent between $1,266.99 and $1,649.29.
 >
-> **Findings:**
+> **Findings:** The following customers represent our highest-spending segment:
 >
-> - The overall churn rate has shown a consistent downward trend over the last six months, falling 
->   from 94.3% in April to 90.0% in September.
-> - In September, the churn rate was consistent across segments, with no specific gender or traffic 
->   source showing a significant deviation from the 90% average.
+> | User ID | Total Spend |
+> |---|---|
+> | 87447 | $1,649.29 |
+> | 34852 | $1,644.00 |
+> | 1303 | $1,527.00 |
+> | 15467 | $1,419.41 |
+> | 40117 | $1,401.66 |
+> | 70422 | $1,323.99 |
+> | 24338 | $1,312.97 |
+> | 20577 | $1,299.74 |
+> | 32160 | $1,293.81 |
+> | 60516 | $1,266.99 |
 >
-> | Segment | September Churn Rate | August Churn Rate |
-> |---|---|---|
-> | Overall | 90.0% | 91.8% |
-> | By Gender (F) | 89.7% | 92.6% |
-> | By Gender (M) | 90.2% | 91.0% |
-> | By Traffic (Organic) | 92.5% | 93.6% |
+> **Limitations:** This data identifies the top 10 spenders by total revenue, but it does not provide
+> information regarding their location, purchase frequency, or the specific product categories they prefer.
 >
 > **Recommended actions:**
-> 1. Since the data shows a positive trend in retention, investigate which specific customer 
->    engagement initiatives were implemented between April and September to identify what is 
->    driving this improvement (priority: medium).
+>
+> 1. Analyze the purchase history of these 10 users to identify high-value product categories.
+> 2. Develop a targeted retention campaign to ensure these top-tier customers remain engaged.
 
-`done · trace c98db83ca814 · 110.3s · 4 LLM calls · 1 SQL attempt`
+`done · trace 4afff8983f60 · 6.6s · 3 LLM calls · 1 SQL attempt`
 
 **After** (edit `prompts/persona.md` → "formal and very concise", **no restart**):
 
-> **You:** Why did churn spike last month?
+> **You:** Who are our top 10 customers by total spend?
 >
-> **Analyst:** Headline: Customer churn did not spike last month; it reached its lowest point in 
-> the past year.
+> **Analyst:** Headline: Our top 10 customers have each spent between $1,266.99 and $1,649.29.
 >
-> **Findings:**
+> **Findings:** The following table details the total spend for our ten highest-value customers:
 >
-> - The churn rate for September 2026 was 90.0%, a decline from 91.8% in August 2026.
-> - The churn rate has shown a consistent downward trend over the last 12 months, decreasing from 
->   96.1% in October 2025 to 90.0% in September 2026.
-> - Data for October 2026 is incomplete as the month is still in progress and cannot be used to 
->   assess performance.
+> | User ID | Total Spend |
+> |---|---|
+> | 87447 | $1,649.29 |
+> | 34852 | $1,644.00 |
+> | 1303 | $1,527.00 |
+> | 15467 | $1,419.41 |
+> | 40117 | $1,401.66 |
+> | 70422 | $1,323.99 |
+> | 24338 | $1,312.97 |
+> | 20577 | $1,299.74 |
+> | 32160 | $1,293.81 |
+> | 60516 | $1,266.99 |
 >
-> | Month | Active Customers (Prev) | Churned Customers | Churn Rate |
-> |---|---|---|---|
-> | 2026-09-01 | 3,616 | 3,253 | 90.0% |
-> | 2026-08-01 | 3,370 | 3,094 | 91.8% |
-> | 2026-07-01 | 2,920 | 2,694 | 92.3% |
+> **Limitations:** This data identifies the top spenders but does not provide information regarding
+> their purchase frequency, product preferences, or geographic location.
 >
 > **Recommended actions:**
-> 1. Investigate the factors contributing to the steady improvement in customer retention over 
->    the last year to identify successful strategies (priority: medium).
+>
+> 1. Analyze the purchase history of these specific users to identify high-margin product categories.
+> 2. Develop a personalized outreach strategy for this segment to encourage repeat high-value purchases.
 
-`done · trace c98db83ca814 · 109.8s · 5 LLM calls · 2 SQL attempt`
+`done · trace b49d9ef9127c · 6.3s · 3 LLM calls · 1 SQL attempt`
 
 #### 11. Observability (Requirement 7: agent-level metrics + per-turn trace)
 
@@ -985,17 +1011,21 @@ cand-6c04539e57  Why did our churn rate spike last month?
 | thumbs_down_rate | 0.0 |
 | rephrase_rate | 0.0 |
 
-> **Note on `llm_fallback_rate = 1.0`**: the primary model (`gemini-3.8-flash`) returns 
-> 504/429 on this API key (free tier), so the client falls back to `gemini-3.1-flash-lite` 
-> on every turn. This is **Requirement 5 working as designed**: the user sees no error, 
-> the fallback chain absorbs the primary-model failure. The 100% fallback rate is **not** a 
-> weakness — it is **the resilience mechanism doing its job**.
+> **Note on `llm_fallback_rate = 1.0`**: the primary model (`gemini-3.8-flash`) returns
+> 429/504 on this API key (free tier), so every turn is answered by the fallback
+> `gemini-3.1-flash-lite`. All transcripts in §10 were generated by the fallback model.
+> The fallback chain is doing what it is designed to do: absorb a failing primary.
 >
 > **Note on `est_cost_usd = None`**: free tier, no pricing configured. In production, pass 
 > `--price-in` and `--price-out` to `metrics`.
 >
 > **Note on `output_pii_redactions = 0`**: any value > 0 would mean an upstream layer leaked 
 > and the last-line scrubber caught it. It is monitored as an alert in production.
+> 
+> **`golden_hit_rate = 1.0` is expected**: the golden trios in `golden/trios/` were written
+> for the questions in §10 (that is what the seed set is for). A production corpus would have
+> a lower hit rate on unseen questions; the metric is a smoke test that retrieval works, not
+> a quality claim.
 
 **`python -m src.cli trace b06a38bc64be`** — replay of the churn turn (persona = "formal and very concise"):
 
@@ -1020,24 +1050,66 @@ cand-6c04539e57  Why did our churn rate spike last month?
 13:40:31.775  INFO    node_done  node=save_report latency_ms=0 status=ok attempts=2
 13:40:31.775  INFO    turn_done  status=done intent=analysis role=executive attempts=2 llm_calls=5 rows=13 golden_ids=["monthly-churn-rate", "monthly-revenue-trend"] question=Why did churn spike last month?
 ```
+> **Note on the redacted `job_id`**: the log redactor treats hyphen-separated hex as a phone
+> number, so part of one BigQuery job id appears as `[REDACTED_PHONE]`. This is a false
+> positive in the redactor (it is conservative on purpose: a real phone number must never
+> reach a log). Production would narrow the regex to numeric-only separators.
 
 #### 12. Network failure (Requirement 5: Resilience & Graceful Error Handling)
 
 *Turn off the network, ask a real question.*
 
-> **You:** Why did churn spike last month?
+> **You:** Who are our top 10 customers by total spend?
 >
 > **Analyst:** I'm having trouble reaching the language model right now. Please try again in a minute.
 
 `failed · trace fc8450bf189a · 0.0s · 0 LLM calls`
+
+*Restore the network, ask the same question again.*
+
+> **You:** Who are our top 10 customers by total spend?
+>
+> **Analyst:** Headline: Our top 10 customers have each spent between $1,266.99 and $1,649.29.
+>
+> **Findings:** The following table details the total spend for our top 10 customers:
+>
+> | User ID | Total Spend |
+> |---|---|
+> | 87447 | $1,649.29 |
+> | 34852 | $1,644.00 |
+> | 1303 | $1,527.00 |
+> | 15467 | $1,419.41 |
+> | 40117 | $1,401.66 |
+> | 70422 | $1,323.99 |
+> | 24338 | $1,312.97 |
+> | 20577 | $1,299.74 |
+> | 32160 | $1,293.81 |
+> | 60516 | $1,266.99 |
+>
+> **Limitations:** This data identifies the top 10 spenders based on completed transactions, but it
+> does not provide information regarding their purchase frequency, location, or product preferences.
+>
+> **Recommended actions:**
+>
+> 1. Analyze the purchase history of these 10 users to identify high-value product categories.
+> 2. Develop a targeted retention strategy for this segment to maintain their high engagement levels.
+
+`done · trace 1fbc538cd3d9 · 10.9s · 3 LLM calls · 1 SQL attempt`
+
+**What this shows:** an outage returns a friendly message with **0 LLM calls** and **0.0 s**
+(failover, not retry); once the network is back, the same session answers normally. The graph
+and the checkpointer survive the outage.
 
 ## 11. Repository layout
 
 ```
 retail-analyst-agent/
 ├── README.md
-├── requirements.txt
+├── requirements.in           # direct dependencies (source of truth)
+├── requirements.txt          # pinned, generated by pip-compile
 ├── .env.example
+├── Dockerfile                # optional: reproducible container
+├── .dockerignore
 ├── prompts/                    # editable without redeploy
 │   ├── persona.md              # the CEO's tone
 │   ├── router.md  schema_qa.md  sql_gen.md  report.md
@@ -1061,8 +1133,12 @@ retail-analyst-agent/
 │   ├── memory/                 # preferences, feedback
 │   └── observability/          # JSON logging, metrics, trace replay
 ├── evals/                      # run_evals.py, datasets, execution comparison, judge
-└── tests/                      # offline unit and flow tests
+├── tests/                      # offline unit and flow tests
+├── data/                       # created at runtime (SQLite: reports, checkpoints, memory)
+└── logs/                       # created at runtime (JSON logs)
 ```
+`data/` and `logs/` are created automatically on first run; they are excluded from git
+(see `.gitignore`) and from the Docker image (see `.dockerignore`).
 
 `bq_client.py` is the BigQuery runner supplied with the assignment, kept unchanged; `src/sql/executor.py` extends it.
 
@@ -1084,8 +1160,11 @@ retail-analyst-agent/
 - **Confirmation is strict string matching.** Only explicit phrases ("yes", "yes please", "yes delete them", "go ahead", ...)
   confirm a deletion. Anything else, including a bare "ok" or "sure", cancels it, says so, and is then handled as a new
   message. A deletion can be reversed with `undo` for ten minutes.
-- **Latency.** In the recorded examples, free-tier rate limits (HTTP 429 with backoff) dominate the response time, and
-  the CLI shows a spinner rather than step-by-step progress. Production uses paid quota and streams progress.
+- **Latency.** Free-tier quota (HTTP 429) and timeouts (HTTP 504) on the primary model dominate
+  the response time. The trace in §11 (`b06a38bc64be`) shows `route` taking 71.6 s: the primary model hit a
+  60 s timeout (`LLM_TIMEOUT_S`), the client fell back to `gemini-3.1-flash-lite`, and the
+  fallback answered in 12.8 s. Reducing `LLM_TIMEOUT_S` to 20–30 s would cut that wait by half
+  to two-thirds; production uses paid quota and streams progress.
 - **Lexical retrieval.** TF-IDF with hand-made synonyms is enough for the seed corpus; production should use hybrid
   dense plus BM25 retrieval.
 - **Seed data is illustrative.** The nine golden trios and the evaluation datasets were written for this prototype,
@@ -1097,13 +1176,14 @@ retail-analyst-agent/
   by `python -m evals.run_evals --suite all`, which should be run before relying on any result.
 - **LLM reasoning can override formatting, and LLMs are non-deterministic.** The same question can produce different
   answers: in one run the model correctly flags a 0% metric as a query artifact, in another it reports it as a fact.
-  When a question needs a paradox explained (e.g. churned count grew but churn rate fell), the model prioritises the
-  explanation over a requested `depth=brief`. The `reasoning` dimension of the LLM-judge and the golden trios reduce
-  the probability of a wrong answer but do not eliminate it; this is why the judge runs on every candidate before
-  promotion and the regression suite is part of the release gate. Production would add a post-hoc check (e.g. if the
-  SQL filters out returns and the report mentions "0% return rate", flag it) and a length check.
+  **Steps 3 and 8 in §10 show the artifact-reported variant**, marked inline; the flagged variant is the expected
+  behaviour. When a question needs a paradox explained (e.g. churned count grew but churn rate fell), the model
+  prioritises the explanation over a requested `depth=brief`. The `reasoning` dimension of the LLM-judge and the
+  golden trios reduce the probability of a wrong answer but do not eliminate it; this is why the judge runs on every
+  candidate before promotion and the regression suite is part of the release gate. Production would add a post-hoc
+  check (e.g. if the SQL filters out returns and the report mentions "0% return rate", flag it) and a length check.
 - **SQL may retry after a successful fetch.** Observed with transient Gemini 504/429 errors and with the
   `future_periods` check: the first query may succeed but be regenerated, e.g. to exclude an incomplete current month.
-  The retry loop is bounded (`max_sql_attempts=3`), and the final answer uses the last successful query, so correctness
-  is unaffected. The `future_periods` check is a **feature**: it catches incomplete current-month results (e.g.
-  October 2026 in progress) and asks the model to exclude them.
+  The retry loop is bounded (`max_sql_attempts=3`), and the final answer uses the last successful query, so
+  correctness is unaffected. The `future_periods` check catches incomplete current-month results (e.g. October
+  2026 in progress) and asks the model to exclude them.
