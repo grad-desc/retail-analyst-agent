@@ -534,8 +534,33 @@ pip install -r requirements.txt
 cp .env.example .env                                     # then edit it (see below)
 gcloud auth application-default login                    # BigQuery access
 ```
+**Platform notes**
 
-`.env`:
+- **Windows**: if `gcloud` is not on PATH after install, add
+  `C:\Program Files (x86)\Google\Cloud SDK\google-cloud-sdk\bin` and reopen the terminal.
+  If `gcloud auth application-default login` fails with `DefaultCredentialsError`, make sure
+  you are logged into the same Google account as the GCP project.
+- **macOS (Apple Silicon)**: if `pip install` fails on a native dependency, retry with
+  `pip install --no-cache-dir -r requirements.txt`.
+- **CI / headless**: set `GOOGLE_APPLICATION_CREDENTIALS` to a service-account JSON key
+  instead of `gcloud auth application-default login`.
+
+### Optional: Docker
+
+**macOS / Linux**:
+
+```bash
+docker build -t retail-analyst .
+docker run -it --env-file .env \
+  -v "$HOME/.config/gcloud:/root/.config/gcloud" retail-analyst
+```
+
+**Windows**:
+
+```bash
+docker build -t retail-analyst .
+docker run -it --env-file .env -v "$env:APPDATA\gcloud:/root/.config/gcloud" retail-analyst
+```
 
 | Variable | Required | Meaning |
 |---|---|---|
