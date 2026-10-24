@@ -545,22 +545,9 @@ gcloud auth application-default login                    # BigQuery access
 - **CI / headless**: set `GOOGLE_APPLICATION_CREDENTIALS` to a service-account JSON key
   instead of `gcloud auth application-default login`.
 
-### Optional: Docker
-
-**macOS / Linux**:
-
-```bash
-docker build -t retail-analyst .
-docker run -it --env-file .env \
-  -v "$HOME/.config/gcloud:/root/.config/gcloud" retail-analyst
-```
-
-**Windows**:
-
-```bash
-docker build -t retail-analyst .
-docker run -it --env-file .env -v "$env:APPDATA\gcloud:/root/.config/gcloud" retail-analyst
-```
+**Dependency pinning.** 
+`requirements.txt` is generated from the `.in` file
+with `pip-compile` (pip-tools), so every transitive dependency is pinned.
 
 | Variable | Required | Meaning |
 |---|---|---|
@@ -571,7 +558,31 @@ docker run -it --env-file .env -v "$env:APPDATA\gcloud:/root/.config/gcloud" ret
 | `GCP_PROJECT_ID` | yes | Billing project for BigQuery (required even for public datasets) |
 | `BQ_LOCATION`, `BQ_MAX_BYTES`, `LLM_TIMEOUT_S`, `MAX_LLM_CALLS_PER_TURN` | no | Defaults: `US`, 1 GB, 60 s, 8 |
 
-**Run the tests** (offline, no keys, no network; BigQuery and Gemini are replaced by fakes, while LangGraph, including the
+### Optional: Docker
+
+Docker is **optional**. It assumes you have already completed the **native setup** above:
+a `.env` file with `GEMINI_API_KEY` and `GCP_PROJECT_ID`, and `gcloud auth application-default login`
+(the ADC file is mounted into the container).
+
+**macOS / Linux**:
+
+```bash
+docker build -t retail-analyst .
+docker run -it --env-file .env \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/adc.json \
+  -v "$HOME/.config/gcloud/application_default_credentials.json:/tmp/adc.json:ro" \
+  retail-analyst
+```  
+
+**Windows**:
+
+```bash
+docker build -t retail-analyst .
+docker run -it --env-file .env -e GOOGLE_APPLICATION_CREDENTIALS=/tmp/adc.json -v "$env:APPDATA\gcloud\application_default_credentials.json:/tmp/adc.json:ro" retail-analyst
+```
+
+### **Run the tests** 
+(offline, no keys, no network; BigQuery and Gemini are replaced by fakes, while LangGraph, including the
 confirmation pause and resume, runs for real):
 
 ```bash

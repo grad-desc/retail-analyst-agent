@@ -1,0 +1,45 @@
+.env
+.env.*
+
+# Virtual environments — host-specific, incompatible with the container
+.venv/
+venv/
+env/
+ENV/
+
+# Python caches — bytecode built on Windows breaks imports in Linux
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Test / build artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Runtime data and logs — never bake the user's state into the image
+logs/
+data/
+*.sqlite
+*.sqlite3
+
+# Eval outputs — history of past runs, not needed in the image
+evals/results/
+
+# Git metadata — not needed in the image, and can leak history
+.git/
+.gitignore
+
+# Project meta — not needed at runtime
+README.md
+Dockerfile
+.dockerignore
+.github/
+
+# OS noise
+.DS_Store
+Thumbs.db
