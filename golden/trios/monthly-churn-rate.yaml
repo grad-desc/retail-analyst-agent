@@ -1,0 +1,41 @@
+id: monthly-churn-rate
+status: approved
+question: Why did our churn rate spike last month?
+interpretation: Churn in month M is the share of customers who bought in month M-1 but not in month M.
+  The current, incomplete month is excluded. To explain a spike, compare the churn series first, then
+  break it down by segment.
+tags:
+- customer-behavior
+- churn
+- time-based
+sql: |-
+  WITH monthly AS (
+    SELECT DISTINCT oi.user_id, DATE_TRUNC(DATE(oi.created_at), MONTH) AS month
+    FROM order_items AS oi
+    WHERE oi.status NOT IN ('Cancelled', 'Returned')
+  ), pairs AS (
+    SELECT m.month AS prev_month,
+           COUNT(DISTINCT m.user_id) AS active_prev,
+           COUNT(DISTINCT IF(n.user_id IS NULL, m.user_id, NULL)) AS churned
+    FROM monthly AS m
+    LEFT JOIN monthly AS n
+      ON n.user_id = m.user_id AND n.month = DATE_ADD(m.month, INTERVAL 1 MONTH)
+    GROUP BY m.month
+  )
+  SELECT DATE_ADD(prev_month, INTERVAL 1 MONTH) AS month,
+         active_prev,
+         churned,
+         ROUND(churned / active_prev, 3) AS churn_rate
+  FROM pairs
+  WHERE prev_month <= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 2 MONTH)
+    AND prev_month >= DATE_SUB(DATE_TRUNC(CURRENT_DATE(), MONTH), INTERVAL 8 MONTH)
+  ORDER BY month
+report: |-
+  **Headline:** Churn rose from <a>% to <b>% last month, the highest in <N> months.
+  **Findings:**
+  - The previous month had <active_prev> active customers, of which <churned> did not return.
+  - Check whether the spike follows a promotion-driven acquisition peak.
+  **Recommended actions:**
+  1. Segment churn by acquisition channel and category before acting (priority: high).
+created_by: project-author (illustrative seed)
+version: 1

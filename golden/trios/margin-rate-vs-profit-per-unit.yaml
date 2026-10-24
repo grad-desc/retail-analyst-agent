@@ -1,0 +1,42 @@
+id: margin-rate-vs-profit-per-unit
+status: approved
+question: Compare the relative margins and per-item profits of Accessories and Pants & Capris. What do these metrics reveal about their profitability?
+interpretation: |
+  Margin rate measures profit per unit relative to selling price, expressed as a percentage.
+  Profit per unit measures the absolute monetary difference between selling price and unit cost.
+  These metrics can lead to different conclusions: a category can have a higher margin rate
+  without generating more profit per item. Explain both the relative and absolute results
+  rather than treating a higher margin rate as evidence of higher per-item profit.
+tags:
+- product-performance
+- profitability
+- metric-interpretation
+sql: |-
+  SELECT
+      p.category,
+      AVG(oi.sale_price) AS avg_selling_price,
+      AVG(p.cost) AS avg_unit_cost,
+      AVG(oi.sale_price - p.cost) AS profit_per_unit,
+      SAFE_DIVIDE(
+          AVG(oi.sale_price - p.cost),
+          AVG(oi.sale_price)
+      ) * 100 AS margin_rate_pct
+  FROM `bigquery-public-data.thelook_ecommerce.order_items` AS oi
+  JOIN `bigquery-public-data.thelook_ecommerce.products` AS p
+      ON oi.product_id = p.id
+  WHERE p.category IN ('Accessories', 'Pants & Capris')
+  GROUP BY p.category
+report: |-
+  **Headline:** Accessories have a substantially higher margin rate, but their average profit per item is nearly identical to that of Pants & Capris.
+
+  **Findings:**
+  - Accessories have an average selling price of $42.50 and an average unit cost of $17.03, yielding approximately $25.47 profit per item and a 59.94% margin rate.
+  - Pants & Capris have a higher average selling price of $53.88 and an average unit cost of $28.45, yielding approximately $25.43 profit per item and a 47.20% margin rate.
+  - Accessories retain a larger proportion of their selling price as profit, but they do not generate meaningfully higher absolute profit per item. Pants & Capris sell at a higher price and have higher costs, which largely offset the price difference.
+  - Margin rate is a relative measure; profit per unit is an absolute monetary measure. A higher percentage margin does not necessarily imply greater profit per item.
+
+  **Recommended actions:**
+  1. Consider both margin rate and profit per unit when comparing category profitability (priority: high).
+  2. Examine sales volume and total profit before deciding which category contributes more to overall business performance (priority: medium).
+created_by: project-author (illustrative seed)
+version: 1

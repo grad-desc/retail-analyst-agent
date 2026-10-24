@@ -1,0 +1,11 @@
+.env
+__pycache__/
+.idea/
+*.pyc
+data/
+.venv/
+.pytest_cache/
+logs/
+golden/candidates/*.yaml
+golden/rejected/
+evals/results/*.json

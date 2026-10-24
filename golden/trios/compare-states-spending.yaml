@@ -1,0 +1,30 @@
+id: compare-states-spending
+status: approved
+question: Why are users in state X underspending compared with users in state Y?
+interpretation: Underspending is spend per customer. It is decomposed into orders per customer and average
+  order value, so the difference can be attributed to frequency or basket size.
+tags:
+- customer-behavior
+- comparison
+- geography
+sql: |-
+  SELECT u.state,
+         COUNT(DISTINCT oi.user_id) AS customers,
+         COUNT(DISTINCT oi.order_id) AS orders,
+         ROUND(SUM(oi.sale_price) / COUNT(DISTINCT oi.user_id), 2) AS spend_per_customer,
+         ROUND(COUNT(DISTINCT oi.order_id) / COUNT(DISTINCT oi.user_id), 2) AS orders_per_customer,
+         ROUND(SUM(oi.sale_price) / COUNT(DISTINCT oi.order_id), 2) AS avg_order_value,
+         ROUND(AVG(oi.sale_price), 2) AS avg_item_price
+  FROM order_items AS oi
+  JOIN users AS u ON u.id = oi.user_id
+  WHERE u.state IN ('California', 'Texas') AND oi.status NOT IN ('Cancelled', 'Returned')
+  GROUP BY u.state
+report: |-
+  **Headline:** Customers in <X> spend <p>% less than in <Y>.
+  **Why:**
+  - Frequency: <o_X> vs <o_Y> orders per customer.
+  - Basket: average order value <a_X> vs <a_Y>.
+  **Recommended actions:**
+  1. Target <X> with re-engagement offers if frequency is the gap (priority: medium).
+created_by: project-author (illustrative seed)
+version: 1

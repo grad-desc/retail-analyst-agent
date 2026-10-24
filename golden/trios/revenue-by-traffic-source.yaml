@@ -1,0 +1,23 @@
+id: revenue-by-traffic-source
+status: approved
+question: Which acquisition channels (traffic sources) bring the most valuable customers?
+interpretation: Value is revenue per customer by the customer's registered traffic source, using net revenue.
+tags:
+- customer-behavior
+- acquisition
+sql: |-
+  SELECT u.traffic_source,
+         COUNT(DISTINCT oi.user_id) AS customers,
+         ROUND(SUM(oi.sale_price), 2) AS revenue,
+         ROUND(SUM(oi.sale_price) / COUNT(DISTINCT oi.user_id), 2) AS revenue_per_customer
+  FROM order_items AS oi
+  JOIN users AS u ON u.id = oi.user_id
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+  GROUP BY u.traffic_source
+  ORDER BY revenue DESC
+report: |-
+  **Headline:** <Source> brings the most revenue, but <Source2> has the highest revenue per customer.
+  **Recommended actions:**
+  1. Shift budget toward channels with high revenue per customer (priority: medium).
+created_by: project-author (illustrative seed)
+version: 1

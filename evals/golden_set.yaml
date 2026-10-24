@@ -1,0 +1,50 @@
+# Execution-accuracy cases: the agent's final query must return the same data as `reference_sql`.
+# The reference runs through the same validator/RLS as the agent, so customer cases compare scoped data.
+# role: customer cases use --customer-id and are skipped when it is not given.
+cases:
+  - id: count-orders
+    role: executive
+    question: "How many orders are there in total?"
+    reference_sql: "SELECT COUNT(*) FROM orders"
+  - id: net-revenue-total
+    role: executive
+    question: "What is our total net revenue, excluding cancelled and returned items?"
+    reference_sql: "SELECT SUM(sale_price) FROM order_items WHERE status NOT IN ('Cancelled', 'Returned')"
+  - id: top-categories
+    role: executive
+    question: "What are the top 5 product categories by net revenue, excluding cancelled and returned items?"
+    reference_sql: |
+      SELECT p.category, SUM(oi.sale_price) AS revenue
+      FROM order_items oi JOIN products p ON p.id = oi.product_id
+      WHERE oi.status NOT IN ('Cancelled', 'Returned')
+      GROUP BY p.category ORDER BY revenue DESC LIMIT 5
+    allow_extra_columns: true
+  - id: customers-per-country
+    role: executive
+    question: "How many customers do we have in each country?"
+    reference_sql: "SELECT country, COUNT(*) FROM users GROUP BY country"
+  - id: orders-by-status
+    role: executive
+    question: "How many orders are there for each order status?"
+    reference_sql: "SELECT status, COUNT(*) FROM orders GROUP BY status"
+  - id: distinct-brands
+    role: executive
+    question: "How many distinct brands do we sell?"
+    reference_sql: "SELECT COUNT(DISTINCT brand) FROM products"
+  - id: top-brands-units
+    role: executive
+    question: "Which 3 brands sold the most items, counting items of every status?"
+    reference_sql: |
+      SELECT p.brand, COUNT(*) AS items
+      FROM order_items oi JOIN products p ON p.id = oi.product_id
+      GROUP BY p.brand ORDER BY items DESC LIMIT 3
+    allow_extra_columns: true
+  - id: rls-customer-orders
+    role: customer
+    question: "How many orders have been placed in total?"
+    reference_sql: "SELECT COUNT(*) FROM orders"      # scoped to the customer, so this proves RLS end to end
+  - id: report-with-actions
+    role: executive
+    question: "Create a report on net revenue by product category with insights and action items"
+    expect_saved_report: true
+    judge: true

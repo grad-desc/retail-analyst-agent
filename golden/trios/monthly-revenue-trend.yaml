@@ -1,0 +1,25 @@
+id: monthly-revenue-trend
+status: approved
+question: What is our monthly revenue trend?
+interpretation: Revenue is net revenue by order item creation month, excluding Cancelled and Returned
+  items. Months are calendar months.
+tags:
+- time-based
+- trend
+sql: |-
+  SELECT TIMESTAMP_TRUNC(oi.created_at, MONTH) AS month,
+         COUNT(DISTINCT oi.order_id) AS orders,
+         ROUND(SUM(oi.sale_price), 2) AS revenue
+  FROM order_items AS oi
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
+  GROUP BY month
+  ORDER BY month
+report: |-
+  **Headline:** Revenue grew/declined <X>% from <first month> to <last month>.
+  **Findings:**
+  - Peak month: <month> with <revenue>; weakest: <month>.
+  - Orders and revenue move together, so the change is driven by <volume/price>.
+  **Recommended actions:**
+  1. Plan inventory and campaigns around the peak season (priority: medium).
+created_by: project-author (illustrative seed)
+version: 1
